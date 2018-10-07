@@ -7,12 +7,12 @@ We have specific application (high-frequency trading system) in mind for designi
 Common Features:
 
  * It is highly scalable and fast.
- * It is header only.
+ * It is header only and lock-free.
  * No external dependencies, only standard library needed (C++11).
 
 # How to use
-You only need to include file **hp-threadpool.hpp** in your project, see also **example.cpp**.
+You only need to include file **hp-threadpool.hpp** in your project. Please take a look at **example.cpp** to see how to use the APIs of **hp-threadpool.hpp**.
 
 # Extra Contribution
-We also provide a **high_resolution_timer.h** for benchmark testing.
+We also provide a cross-platform **high_resolution_timer.h** for benchmark testing.
 
