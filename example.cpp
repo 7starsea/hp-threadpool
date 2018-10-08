@@ -60,20 +60,25 @@ void benchmark_test(){
 		HighResolutionTimer timer;
 
 		timer.start();
-			HPThreadPool::ThreadPool<RunningTask*> tp(3); 
-			tp.start();
 			RunningTask task1( 0, size/3, a), task2(size/3, (2*size)/3, a), task3((2*size)/3, size, a);
+			std::vector<RunningTask*> tasks; 
+				tasks.push_back(&task1);
+				tasks.push_back(&task2);
+				tasks.push_back(&task3);
+			HPThreadPool::ThreadPool<RunningTask*> tp(3, tasks); 
+			tp.start();
 
 		double t0 = timer.microseconds_elapsed();
 		
 		double sum = 0, sum2=0;
 
-		for(int k = 0; k < 20; ++k){
+		for(int k = 0; k < 30; ++k){
 			timer.start();
-			
-			tp.post_task(0, &task1);
-			tp.post_task(1, &task2);
-			tp.post_task(2, &task3);
+			tp.restart_tasks();
+
+//			tp.post_task(0, &task1);
+//			tp.post_task(1, &task2);
+//			tp.post_task(2, &task3);
 			while( ! tp.is_task_done() );
 			
 			sum = task1.sum + task2.sum + task3.sum; 

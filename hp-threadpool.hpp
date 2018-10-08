@@ -45,7 +45,7 @@ namespace HPThreadPool{
 				stop_(true), task_done_(true), t_() {	};
 
 			inline void join(){ if(t_.joinable()) t_.join(); }
-			inline void stop(){		stop_.store(true); }
+			inline void stop(){		stop_.store(true, std::memory_order_relaxed); }
 			inline bool is_stopped(){ return stop_.load(std::memory_order_relaxed); }
 			inline bool is_task_done(){	return task_done_.load(std::memory_order_relaxed); }
 		protected:	
@@ -65,12 +65,18 @@ namespace HPThreadPool{
 	class Worker : public WorkerBase {
 		public:
 			Worker(): WorkerBase(), task_() {};
+			Worker(const Task & task): WorkerBase(), task_(task) {};
 
 			void start(){
 				if(is_stopped()){
 					stop_.store(false);
 					t_ = std::thread(std::bind(&Worker::_run, this));
 				}
+			}
+
+			/// @brief please make sure task_ is a valid task
+			void restart_task(){
+				task_done_.store(false, std::memory_order_relaxed);
 			}
 
 			/// @brief: return true if task is posted successfully
@@ -84,7 +90,6 @@ namespace HPThreadPool{
 					task_done_.store(false);
 					return true;
 				}
-				
 				return false;		
 			}
 		protected:
@@ -128,6 +133,13 @@ namespace HPThreadPool{
 					workers_.emplace_back(new Worker<Task>());
 				}
 			}
+			ThreadPool(int thread_size, const std::vector<Task> & tasks)
+			: thread_size_(thread_size), workers_() {
+				for(int i = 0; i < thread_size; ++i){
+					workers_.emplace_back(new Worker<Task>(tasks[i]));
+				}
+			}
+
 			~ThreadPool(){
 				for(int i = 0; i < thread_size_; ++i){
 					delete workers_[i];
@@ -156,11 +168,19 @@ namespace HPThreadPool{
 			void post_task(int ind, const Task & task){
 				workers_[ind]->post(task);
 			}
+
 			/// @implementation in mind: when developer call post_tasks, 
 			///                          developer should make sure the all workers are in idle and number of tasks equals thread_size
 			void post_tasks(const std::vector<Task> & tasks){
 				for(int i = 0; i < thread_size_; ++i){
 					workers_[i]->post(tasks[i]);
+				}
+			}
+			/// @implementation in mind: when developer call restart_tasks, 
+			///                          developer should make sure the all workers are in idle and already assigned task (either by post or constructor)
+			void restart_tasks(){
+				for(int i = 0; i < thread_size_; ++i){
+					workers_[i]->restart_task();
 				}
 			}
 		public:
